@@ -205,18 +205,19 @@ func (fc *FileCache) getNamespaceDir() string {
 func (fc *FileCache) getItem(key string) (*item, error) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	item, ok := fc.keyItem[key]
 
-	if !ok {
-		path := fc.KeyToPath(key)
-
-		item, err := getCacheItem(path, fc.maxSize)
-		if err != nil {
-			return nil, err
-		}
-
-		fc.keyItem[key] = item
+	if item, ok := fc.keyItem[key]; ok {
+		return item, nil
 	}
+
+	path := fc.KeyToPath(key)
+
+	item, err := getCacheItem(path, fc.maxSize)
+	if err != nil {
+		return nil, err
+	}
+
+	fc.keyItem[key] = item
 
 	return item, nil
 }
