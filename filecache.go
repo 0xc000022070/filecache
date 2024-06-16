@@ -182,9 +182,11 @@ func (fc *FileCache) Close() error {
 //
 // Unnecessary calls if `(*FileSystem).Destroy` was already called.
 func (fc *FileCache) Shutdown() {
-	close(fc.pipe)
-	close(fc.shutdown)
-	<-time.After(time.Microsecond)
+	if !fc.closed {
+		close(fc.pipe)
+		close(fc.shutdown)
+		<-time.After(time.Microsecond)
+	}
 
 	fc.mu.Lock()
 
@@ -193,9 +195,9 @@ func (fc *FileCache) Shutdown() {
 	}
 
 	fc.keyItem = nil
+	fc.closed = true
 
 	fc.mu.Unlock()
-
 	fc.wg.Wait()
 }
 
