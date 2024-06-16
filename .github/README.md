@@ -103,6 +103,14 @@ func main() {
         if err := filecache.SetEncoded(cache, key, user); err != nil {
             fmt.Fprintln(os.Stderr, err)
         }
+
+        user2, err := filecache.GetDecoded[UserData](cache, key)
+        if err != nil {
+            fmt.Fprintln(os.Stderr, err)
+            os.Exit(1)
+        }
+
+        fmt.Fprintf(os.Stdout, "%s <%s>\n", user2.Name, user2.Email)
     }
 
     if !cache.Exists(fmt.Sprintf("user-%s", users[0].Email)) {
