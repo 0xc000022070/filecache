@@ -15,6 +15,8 @@ func TestBasic(t *testing.T) {
 		filecache.WithCheckInterval(time.Second),
 	)
 
+	defer cache.Destroy()
+
 	type BasicTestData struct {
 		Why string
 	}
