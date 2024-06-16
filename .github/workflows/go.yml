@@ -1,0 +1,46 @@
+name: Go workflow
+on:
+  - push
+  - pull_request
+  - workflow_dispatch
+
+jobs:
+  format-check:
+    name: Check format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Set up gofumpt
+        uses: luisnquin/setup-gofumpt@v1.0.0
+
+      - name: Check .go files format
+        run: |
+          if [ ! "$(gofumpt -d ./..)" = "" ]; then
+              printf "\033[38;2;219;24;73mInvalid format, please execute 'gofumpt -w ./'\033[0m\n"
+          fi
+
+  run-tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Golang with cache
+        uses: magnetikonline/action-golang-cache@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up tparse and richgo
+        run: |
+          go install github.com/kyoh86/richgo@latest
+          go install github.com/mfridman/tparse@latest
+
+      - name: Run tests
+        run: |
+          richgo test -v ./...
+
+          echo "Summary"
+          set -o pipefail && go test ./... -json | tparse -all
