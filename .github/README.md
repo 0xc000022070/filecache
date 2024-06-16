@@ -1,6 +1,6 @@
 # File cache
 
-A modern file-based cache implementation written in Go.
+A simple modern file-based cache implementation written in Go.
 
 Inspired by [gokyle/filecache](https://github.com/gokyle/filecache).
 
