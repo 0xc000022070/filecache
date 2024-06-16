@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// A cache that uses the temporary directory to cache data.
 type FileCache struct {
 	namespace string
 
@@ -34,6 +35,7 @@ const (
 	Gigabyte = 1024 * 1024 * 1024
 )
 
+// Default values for the options.
 const (
 	defaultTTL           = time.Minute * 5
 	defaultMaxSize       = Megabyte * 16
@@ -42,6 +44,7 @@ const (
 	defaultPipeSize      = 4
 )
 
+// Some error that you can try to properly handle.
 var (
 	ErrIsDirectory = fmt.Errorf("item is a directory")
 	ErrTooLarge    = fmt.Errorf("item is too large")
@@ -49,6 +52,11 @@ var (
 	ErrInvalidKey  = fmt.Errorf("invalid key")
 )
 
+// Returns the decoded value of the item with the given key. Is supposed
+// that the value associated with the given key was properly encoded with
+// encoding/gob using `SetEncoded`.
+//
+// It will return `ErrNotFound` if the item is not found.
 func GetDecoded[T any](fc *FileCache, key string) (T, error) {
 	var t T
 
@@ -65,6 +73,9 @@ func GetDecoded[T any](fc *FileCache, key string) (T, error) {
 	return t, nil
 }
 
+// Wrapper for `(*FileCache).Set` that first encodes the value with encoding/gob.
+//
+// It could return `ErrTooLarge` and `ErrNotFound`.
 func SetEncoded[T any](fc *FileCache, key string, v T) error {
 	b := new(bytes.Buffer)
 
@@ -76,6 +87,13 @@ func SetEncoded[T any](fc *FileCache, key string, v T) error {
 	return fc.Set(key, b.Bytes())
 }
 
+// Creates a new file-based cache with the given namespace.
+//
+// The namespace is used to create a directory in the `os.TempDir()` to store
+// the cache files.
+//
+// The options are optional and can be used to customize the cache behavior.
+// See the `With*` functions for more information.
 func New(namespace string, options ...fileCacheOptFn) *FileCache {
 	fc := FileCache{
 		checkInterval: defaultCheckInterval,
@@ -99,6 +117,7 @@ func New(namespace string, options ...fileCacheOptFn) *FileCache {
 	return &fc
 }
 
+// Retrieves the content from the memory or file-system with the given key.
 func (fc *FileCache) Get(key string) ([]byte, error) {
 	item, err := fc.getItem(key)
 	if err != nil {
@@ -108,14 +127,16 @@ func (fc *FileCache) Get(key string) ([]byte, error) {
 	return item.Access(), nil
 }
 
+// Checks if the item with the given key exists in the memory or file-system.
 func (fc *FileCache) Exists(key string) bool {
 	_, err := fc.getItem(key)
 
 	return err == nil
 }
 
+// Sets the content with the given key in the memory and file-system.
 func (fc *FileCache) Set(key string, content []byte) error {
-	path := fc.KeyToPath(key)
+	path := fc.keyToPath(key)
 
 	item, err := setCacheItem(path, content, fc.maxSize)
 	if err != nil {
@@ -129,8 +150,9 @@ func (fc *FileCache) Set(key string, content []byte) error {
 	return nil
 }
 
+// Deletes the content with the given key from the memory and file-system.
 func (fc *FileCache) Delete(key string) error {
-	path := fc.KeyToPath(key)
+	path := fc.keyToPath(key)
 
 	fc.mu.Lock()
 	delete(fc.keyItem, key)
@@ -139,6 +161,7 @@ func (fc *FileCache) Delete(key string) error {
 	return deleteCacheItem(path)
 }
 
+// The total number of items stored in memory.
 func (fc *FileCache) SizeInMemory() int {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
@@ -192,12 +215,12 @@ func (fc *FileCache) Destroy() error {
 	return nil
 }
 
-func (fc *FileCache) KeyToPath(key string) string {
+func (fc *FileCache) keyToPath(key string) string {
 	return filepath.Join(fc.getNamespaceDir(), key)
 }
 
 func (fc *FileCache) getNamespaceDir() string {
-	return filepath.Join(os.TempDir(), "fc", fmt.Sprintf("%s-namespace", fc.namespace))
+	return filepath.Join(os.TempDir(), "fc-namespaces", fc.namespace)
 }
 
 func (fc *FileCache) getItem(key string) (*item, error) {
@@ -208,7 +231,7 @@ func (fc *FileCache) getItem(key string) (*item, error) {
 		return item, nil
 	}
 
-	path := fc.KeyToPath(key)
+	path := fc.keyToPath(key)
 
 	item, err := getCacheItem(path, fc.maxSize)
 	if err != nil {
@@ -228,7 +251,7 @@ func (fc *FileCache) removeItem(key string, onlyMemory bool) {
 		fc.mu.Unlock()
 
 		if !onlyMemory {
-			path := fc.KeyToPath(key)
+			path := fc.keyToPath(key)
 			deleteCacheItem(path)
 		}
 	}
