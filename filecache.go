@@ -109,8 +109,6 @@ func (fc *FileCache) Get(key string) ([]byte, error) {
 }
 
 func (fc *FileCache) Exists(key string) bool {
-	key = filepath.Join(fc.namespace, key)
-
 	_, err := fc.getItem(key)
 
 	return err == nil
