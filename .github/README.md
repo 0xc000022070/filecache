@@ -1,5 +1,7 @@
 # File cache
 
+![Go workflow](https://github.com/0xc000022070/filecache/actions/workflows/go.yml/badge.svg)
+
 A simple modern file-based cache implementation written in Go.
 
 Inspired by [gokyle/filecache](https://github.com/gokyle/filecache).
